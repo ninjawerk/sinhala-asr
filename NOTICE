@@ -1,0 +1,6 @@
+sinhala-asr — offline Sinhala speech recognition
+Copyright 2026 Deshan Alahakoon
+https://github.com/ninjawerk/sinhala-asr
+
+This model builds on omniASR-W2V-300M by Meta AI (Apache License 2.0)
+and was trained on the OpenSLR SLR52 corpus by Google (CC BY-SA 4.0).

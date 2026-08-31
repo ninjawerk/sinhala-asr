@@ -1,0 +1,7 @@
+flask
+numpy
+onnxruntime
+soundfile
+# required by demo.py's language-model lane (the demo refuses to start without it)
+pyctcdecode
+kenlm
