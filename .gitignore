@@ -1,3 +1,6 @@
 # 342 MB — above GitHub's 100 MB file limit. Ships as a release asset instead;
 # the README says where to get it.
 weights.bin
+# Runtime data for the demo's language-model lane; bring your own.
+lm/
+__pycache__/

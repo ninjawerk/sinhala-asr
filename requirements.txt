@@ -1,0 +1,7 @@
+flask
+numpy
+onnxruntime
+soundfile
+# optional, for the language-model lane of demo.py
+pyctcdecode
+kenlm
