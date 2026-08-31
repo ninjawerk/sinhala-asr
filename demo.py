@@ -3,13 +3,12 @@ Web demo for the published sinhala-asr model.
 
 Two decode lanes, shown side by side for the same recording:
 
-  released model alone   greedy CTC over the exact three files a stranger gets
-                         from the GitHub release (graph, weights, vocab)
-  full research pipeline the same per-frame probabilities through beam search
-                         with a word-level LM and lexicon, at the decoder
-                         settings retuned on real dictation rather than read
-                         speech, then through the word-repair pass that splits
-                         words the search welded together
+  model alone     greedy CTC over just the model files (graph, weights, vocab)
+  full pipeline   the same per-frame probabilities through beam search with
+                  the word-level LM and lexicon from the release page, at the
+                  decoder settings retuned on real dictation rather than read
+                  speech, then through the word-repair pass that splits words
+                  the search welded together
 
 The greedy lane exists for comparison; the pipeline lane is the result. The
 language model files are required -- without them the demo refuses to start,
@@ -62,14 +61,14 @@ class Result:
 
 
 class Recogniser:
-    """The released model, plus the full research decode lane for comparison."""
+    """The released model, decoded bare and through the full pipeline."""
 
     unfuser = None
 
-    def __init__(self, repo: Path, lm_dir: Path) -> None:
-        self.vocab: list[str] = json.loads((repo / "vocab.json").read_text("utf-8"))
-        self.session = ort.InferenceSession(str(repo / "sinhala_asr_int8.onnx"))
-        log.info("model loaded from %s", repo)
+    def __init__(self, model_dir: Path, lm_dir: Path) -> None:
+        self.vocab: list[str] = json.loads((model_dir / "vocab.json").read_text("utf-8"))
+        self.session = ort.InferenceSession(str(model_dir / "sinhala_asr_int8.onnx"))
+        log.info("model loaded from %s", model_dir)
         self.lm_decoder = self._load_lm(lm_dir)
 
     def _load_lm(self, lm_dir: Path) -> object:
@@ -93,7 +92,7 @@ class Recogniser:
         words = [w for w in words if w and all(c in charset for c in w)]
         decoder = build_ctcdecoder(labels, str(arpa), words[:400_000],
                                    alpha=LM_ALPHA, beta=LM_BETA)
-        log.info("language model loaded (demo only, not in the release)")
+        log.info("language model loaded")
 
         # The word-repair pass from the research: spoken Sinhala welds words
         # together, and the n-gram arithmetic can prefer the welded form. This
@@ -182,13 +181,16 @@ a{color:#f0a257}
 <a href="https://github.com/ninjawerk/sinhala-asr">github.com/ninjawerk/sinhala-asr</a>,
 decoded two ways so the language model's contribution is visible.</p>
 
+<p class="sub">Speak clearly and slowly, emphasising the pauses between words
+&mdash; the model was trained on read speech (see the README's limitations).</p>
+
 <p><button id="rec">&#127908; Record</button></p>
 
-<div class="lbl">released model alone (greedy)</div>
+<div class="lbl">model alone (greedy)</div>
 <div class="box" id="greedy">&hellip;</div>
 
-<div class="lbl">full research pipeline
-  <span class="note">(+ language model, live-tuned decoder, word repair &mdash; not in the release)</span></div>
+<div class="lbl">full pipeline
+  <span class="note">(+ language model, retuned decoder, word repair)</span></div>
 <div class="box" id="beamed">&hellip;</div>
 
 <div id="meta"></div>
@@ -264,7 +266,7 @@ def create_app(recogniser: Recogniser) -> Flask:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     here = Path(__file__).resolve().parent
-    parser.add_argument("--repo", type=Path, default=here,
+    parser.add_argument("--model-dir", type=Path, default=here / "model",
                         help="directory with sinhala_asr_int8.onnx, weights.bin, vocab.json")
     parser.add_argument("--lm-dir", type=Path, default=here / "lm",
                         help="directory with sinhala.arpa + unigrams.txt "
@@ -273,7 +275,7 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    recogniser = Recogniser(args.repo, args.lm_dir)
+    recogniser = Recogniser(args.model_dir, args.lm_dir)
     create_app(recogniser).run(host="127.0.0.1", port=args.port)
 
 

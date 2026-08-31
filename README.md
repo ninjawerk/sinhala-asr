@@ -22,8 +22,9 @@ into a local `.venv/`. Later runs skip all that and start immediately.
 <details>
 <summary>Manual setup, if you'd rather not run a script</summary>
 
-From the [release page](../../releases), download `weights.bin` (put it next
-to `sinhala_asr_int8.onnx`) plus the language model, then install and run:
+From the [release page](../../releases), download `weights.bin` (put it in
+`model/`, next to `sinhala_asr_int8.onnx`) plus the language model, then
+install and run:
 
 ```bash
 mkdir -p lm
@@ -47,8 +48,8 @@ import kenlm
 from pyctcdecode import build_ctcdecoder
 from unfuse import WordRepair
 
-vocab = json.load(open("vocab.json", encoding="utf-8"))
-sess = ort.InferenceSession("sinhala_asr_int8.onnx")
+vocab = json.load(open("model/vocab.json", encoding="utf-8"))
+sess = ort.InferenceSession("model/sinhala_asr_int8.onnx")
 
 audio, sr = sf.read("clip.wav", dtype="float32")   # 16 kHz mono
 assert sr == 16000
@@ -93,11 +94,11 @@ decoder with a language model.
 
 | file | size | where |
 |---|---|---|
-| `sinhala_asr_int8.onnx` | 0.8 MB | this repo |
-| `vocab.json` | 1 KB | this repo |
-| `weights.bin` | 342 MB | [release](../../releases) |
-| `sinhala.arpa.gz` | 120 MB | [release](../../releases) — word-level language model |
-| `unigrams.txt.gz` | 2.5 MB | [release](../../releases) — 400k-word list |
+| `model/sinhala_asr_int8.onnx` | 0.8 MB | this repo |
+| `model/vocab.json` | 1 KB | this repo |
+| `model/weights.bin` | 342 MB | [release](../../releases) |
+| `lm/sinhala.arpa` | 120 MB gzipped | [release](../../releases) — word-level language model |
+| `lm/unigrams.txt` | 2.5 MB gzipped | [release](../../releases) — 400k-word list |
 
 ## Accuracy
 
@@ -120,6 +121,8 @@ Sinhala in Bengali script, which is the problem this model exists to fix.
 `demo.py` is a small local web page: press record, speak Sinhala, and see the
 same recording decoded two ways — the model alone, and the full pipeline with
 the language model and word repair.
+
+![The demo: the same recording decoded by the model alone and by the full pipeline](docs/demo.png)
 
 It will not start without the `lm/` files from Quick start: the model alone
 is deliberately rough, and a demo of it would give the wrong impression of
@@ -151,7 +154,7 @@ greedily and never gives it back:
 opts = ort.SessionOptions()
 opts.enable_cpu_mem_arena = False
 opts.intra_op_num_threads = 4
-sess = ort.InferenceSession("sinhala_asr_int8.onnx", opts)
+sess = ort.InferenceSession("model/sinhala_asr_int8.onnx", opts)
 ```
 
 **3. Cut long recordings into windows.** Memory grows with audio length.
@@ -174,6 +177,12 @@ this README was checked.
 
 - Trained on **read speech** — people reading sentences aloud. Natural, fast,
   colloquial speech is harder for it.
+- **Word boundaries are the weak spot.** Spoken Sinhala barely marks them
+  acoustically — words flow into each other with no pause — and the model
+  transcribes sound, so what was spoken as one stream comes out as one long
+  welded word. The word-repair pass (`unfuse.py`) splits the clear cases
+  afterwards, but it can't catch everything; speaking with slight pauses
+  between words avoids the problem at the source.
 - No punctuation. Latin letters and digits are in the vocabulary (they appear
   in the training transcripts), but the model emits them too rarely to rely on.
 - Wants clean 16 kHz mono audio, close to the microphone.
