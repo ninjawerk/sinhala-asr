@@ -2,6 +2,6 @@ flask
 numpy
 onnxruntime
 soundfile
-# optional, for the language-model lane of demo.py
+# required by demo.py's language-model lane (the demo refuses to start without it)
 pyctcdecode
 kenlm

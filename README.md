@@ -48,8 +48,9 @@ audio = (audio - audio.mean()) / (audio.std() + 1e-7)   # required
 logp = sess.run(None, {"audio": audio[None, :]})[0][0]
 
 labels = [""] + vocab[1:]
+charset = set(labels)
 words = [w.strip() for w in open("lm/unigrams.txt", encoding="utf-8") if w.strip()]
-words = [w for w in words if all(c in set(labels) for c in w)]
+words = [w for w in words if all(c in charset for c in w)]
 decoder = build_ctcdecoder(labels, "lm/sinhala.arpa", words, alpha=0.8, beta=3.0)
 text = decoder.decode(logp.astype(np.float32), beam_width=128)
 
@@ -75,8 +76,10 @@ third of the accuracy comes from.
   identical to full precision.
 
 The model outputs, 50 times per second of audio, a probability for each of
-105 Sinhala symbols. Turning those into text is the decoder's job — the
-simple greedy loop above, or a smarter decoder with a language model.
+105 symbols — Sinhala, plus a handful of Latin letters and digits that occur
+in the training transcripts (loanwords, brand names). Turning those into
+text is the decoder's job — the simple greedy loop above, or a smarter
+decoder with a language model.
 
 ## Files
 
@@ -163,7 +166,8 @@ this README was checked.
 
 - Trained on **read speech** — people reading sentences aloud. Natural, fast,
   colloquial speech is harder for it.
-- No punctuation, no digits.
+- No punctuation. Latin letters and digits are in the vocabulary (they appear
+  in the training transcripts), but the model emits them too rarely to rely on.
 - Wants clean 16 kHz mono audio, close to the microphone.
 - Its remaining mistakes are mostly real Sinhala words in the wrong place — a
   language model helps with that; a dictionary alone cannot.

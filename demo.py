@@ -17,8 +17,8 @@ because greedy-only output would be mistaken for the finished product.
 
 Requires: flask, onnxruntime, soundfile, numpy, and ffmpeg on PATH.
 The second lane also needs pyctcdecode and kenlm, plus a word-level ARPA
-language model and unigram list under lm/ (not included in this repo --
-build one from Sinhala text with kenlm's lmplz, or any ARPA-producing tool).
+language model and unigram list under lm/ (too large for the repo --
+download them from the release page, as described in the README).
 
     python demo.py
     open http://localhost:7861
@@ -66,7 +66,7 @@ class Recogniser:
 
     unfuser = None
 
-    def __init__(self, repo: Path, lm_dir: Path | None) -> None:
+    def __init__(self, repo: Path, lm_dir: Path) -> None:
         self.vocab: list[str] = json.loads((repo / "vocab.json").read_text("utf-8"))
         self.session = ort.InferenceSession(str(repo / "sinhala_asr_int8.onnx"))
         log.info("model loaded from %s", repo)
@@ -136,10 +136,13 @@ def decode_upload(blob) -> np.ndarray:
     with tempfile.NamedTemporaryFile(suffix=".webm") as src, \
          tempfile.NamedTemporaryFile(suffix=".wav") as dst:
         blob.save(src.name)
-        proc = subprocess.run(
-            ["ffmpeg", "-y", "-i", src.name,
-             "-ar", str(SAMPLE_RATE), "-ac", "1", dst.name],
-            capture_output=True, timeout=30)
+        try:
+            proc = subprocess.run(
+                ["ffmpeg", "-y", "-i", src.name,
+                 "-ar", str(SAMPLE_RATE), "-ac", "1", dst.name],
+                capture_output=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            raise ValueError("ffmpeg took over 30s to convert the recording")
         if proc.returncode != 0:
             raise ValueError("ffmpeg could not read the recording")
         wav, rate = sf.read(dst.name, dtype="float32")
