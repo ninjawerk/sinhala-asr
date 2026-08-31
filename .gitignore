@@ -4,3 +4,4 @@ weights.bin
 # Runtime data for the demo's language-model lane; bring your own.
 lm/
 __pycache__/
+.venv/
