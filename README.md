@@ -6,25 +6,33 @@ time, entirely on-device.
 
 ## Quick start
 
-1. Clone this repo.
-2. From the [release page](../../releases), download:
-   - `weights.bin` — put it next to `sinhala_asr_int8.onnx`
-   - `sinhala.arpa.gz` and `unigrams.txt.gz` — the language model:
+```bash
+git clone https://github.com/ninjawerk/sinhala-asr
+cd sinhala-asr
+./run.sh          # then open http://localhost:7861
+```
 
-   ```bash
-   mkdir -p lm
-   gunzip -c sinhala.arpa.gz  > lm/sinhala.arpa
-   gunzip -c unigrams.txt.gz > lm/unigrams.txt
-   ```
+Press record, speak Sinhala, and see the result. You need Python 3.9–3.12
+(the `kenlm` package does not yet build on 3.13+) and `ffmpeg` installed;
+the script handles the rest — on first run it downloads
+the model weights and language model from the [release page](../../releases)
+(~470 MB, too large for a git repo) and installs the Python dependencies
+into a local `.venv/`. Later runs skip all that and start immediately.
 
-3. Install and run the demo:
+<details>
+<summary>Manual setup, if you'd rather not run a script</summary>
 
-   ```bash
-   pip install -r requirements.txt      # also needs ffmpeg installed
-   python demo.py                       # open http://localhost:7861
-   ```
+From the [release page](../../releases), download `weights.bin` (put it next
+to `sinhala_asr_int8.onnx`) plus the language model, then install and run:
 
-Press record, speak Sinhala, and see the result.
+```bash
+mkdir -p lm
+gunzip -c sinhala.arpa.gz  > lm/sinhala.arpa
+gunzip -c unigrams.txt.gz > lm/unigrams.txt
+pip install -r requirements.txt
+python demo.py
+```
+</details>
 
 ## Using it in your own code
 
