@@ -36,7 +36,10 @@ fetch() {  # fetch <release asset> <destination>
   mv "$2.part" "$2"
 }
 
-fetch weights.bin weights.bin
+# Older clones had weights.bin at the repo root; adopt it rather than re-download.
+[ -e weights.bin ] && [ ! -e model/weights.bin ] && mv weights.bin model/weights.bin
+
+fetch weights.bin model/weights.bin
 
 mkdir -p lm
 if [ ! -e lm/sinhala.arpa ]; then

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sinhala-asr demo</title>
+<style>
+body{background:#0e0f13;color:#eef0f4;font-family:-apple-system,Helvetica,Arial,sans-serif;
+     max-width:640px;margin:0 auto;padding:40px 20px}
+h1{font-size:1.5rem}h1 span{color:#e0873a}
+p.sub{color:#9aa2b1;font-size:.95rem}
+button{background:#e0873a;color:#1a0f05;border:0;border-radius:10px;padding:14px 22px;
+       font-size:1rem;font-weight:700;cursor:pointer}
+.box{background:#15171d;border:1px solid #242833;border-radius:10px;padding:18px;
+     min-height:64px;font-size:1.4rem;line-height:1.6}
+.lbl{color:#9aa2b1;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
+     margin:22px 0 6px}
+.lbl .note{text-transform:none;letter-spacing:0;color:#6b7280}
+#meta{color:#6b7280;font-family:monospace;font-size:.8rem;margin-top:12px}
+#err{color:#e58060;font-size:.9rem;margin-top:12px}
+a{color:#f0a257}
+/* How you speak changes the result more than anything else on this page, so it
+   gets a banner rather than a line of grey subtext people scroll past. */
+.banner{display:flex;gap:14px;align-items:flex-start;background:#2a1d0e;
+        border:1px solid #e0873a;border-left-width:5px;border-radius:10px;
+        padding:16px 18px;margin:22px 0;line-height:1.55}
+.banner .icon{font-size:1.35rem;line-height:1.2;flex:0 0 auto}
+.banner p{margin:0;color:#f7e8d6;font-size:1rem}
+.banner strong{color:#f0a257}
+.banner .why{display:block;margin-top:6px;color:#c9ad8b;font-size:.88rem}
+</style></head><body>
+<h1>sinhala-asr <span>&middot; open-source model demo</span></h1>
+<p class="sub">The exact files from
+<a href="https://github.com/ninjawerk/sinhala-asr">github.com/ninjawerk/sinhala-asr</a>,
+decoded two ways so the language model's contribution is visible.</p>
+
+<div class="banner">
+  <span class="icon" aria-hidden="true">&#128172;</span>
+  <p><strong>Speak clearly and slowly, with a real pause between words.</strong>
+  This matters more than anything else here: the model was trained on read
+  speech, so running words together is exactly where it breaks down.
+  <span class="why">If a result looks bad, try the same sentence again more
+  deliberately before concluding the model cannot hear you &mdash; see
+  <a href="https://github.com/ninjawerk/sinhala-asr#limitations">limitations</a>.</span></p>
+</div>
+
+<p><button id="rec">&#127908; Record</button></p>
+
+<div class="lbl">model alone (greedy)</div>
+<div class="box" id="greedy">&hellip;</div>
+
+<div class="lbl">full pipeline
+  <span class="note">(+ language model, retuned decoder, word repair)</span></div>
+<div class="box" id="beamed">&hellip;</div>
+
+<div id="meta"></div>
+<div id="err"></div>
+
+<script>
+const el = id => document.getElementById(id);
+let recorder = null;
+
+el('rec').onclick = async () => {
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    el('err').textContent = 'Microphone unavailable: ' + e.message;
+    return;
+  }
+  const chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = async () => {
+    el('rec').textContent = '\u{1F3A4} Record';
+    stream.getTracks().forEach(t => t.stop());
+    el('greedy').innerHTML = '&hellip;';
+    el('beamed').innerHTML = '&hellip;';
+    el('err').textContent = '';
+    el('meta').textContent = 'transcribing\u2026';
+    const body = new FormData();
+    body.append('audio', new Blob(chunks, { type: recorder.mimeType }));
+    try {
+      const resp = await fetch('/transcribe', { method: 'POST', body });
+      const j = await resp.json();
+      if (!resp.ok) throw new Error(j.error || resp.statusText);
+      el('greedy').textContent = j.greedy || '(nothing)';
+      el('beamed').textContent = j.beamed || '(nothing)';
+      el('meta').textContent =
+        j.seconds.toFixed(2) + 's audio \u00b7 decoded in ' + j.decode_ms + ' ms';
+    } catch (e) {
+      el('meta').textContent = '';
+      el('err').textContent = e.message;
+    }
+  };
+  recorder.start();
+  el('rec').textContent = '\u23F9 Stop';
+};
+</script></body></html>
